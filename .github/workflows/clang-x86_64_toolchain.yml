@@ -1,0 +1,49 @@
+name: clang-x86_64_toolchain
+defaults:
+  run:
+    shell: bash
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_mpv:
+    name: Building mpv
+    runs-on: ubuntu-latest
+    container:
+      image: docker://ghcr.io/eko5624/archlinux:latest
+    steps:  
+      - name: Setup git config
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --global pull.rebase true
+          git config --global rebase.autoStash true
+          git config --global fetch.prune true
+          git config --global --add safe.directory $PWD
+      - name: Checkout toolchain
+        uses: actions/checkout@v4
+        with:
+          repository: shinchiro/mpv-winbuild-cmake
+          path: mpv-winbuild-cmake
+      - name: Loading x86_64 toolchain cache
+        uses: actions/cache/restore@main
+        with:
+          path: ${{ github.workspace }}/mpv-winbuild-cmake/build64
+          key: toolchain-clang-build64-${{ github.run_id }}
+          restore-keys: |
+            toolchain-clang-build64-
+
+      - name: Get clang_root cache
+        run: |
+          7z a cache-build64.7z mpv-winbuild-cmake/build64/*
+          
+      - name: Release
+        continue-on-error: true
+        uses: softprops/action-gh-release@master
+        with:
+          tag_name: toolchain
+          name: toolchain
+          files: cache*.7z
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
